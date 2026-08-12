@@ -39,7 +39,7 @@ Keep the response focused and appropriately detailed.
 
 Use LaTeX for mathematics. For display equations, use $$...$$ on separate lines;
 for inline mathematics, use $...$. Do not wrap equations in square brackets like
-[ ... ] and do not use Python-style escape sequences.
+[ ... ], Markdown code fences, or language labels such as ```java.
 
 CONTEXT:
 {context}
@@ -55,6 +55,10 @@ SCRATCHPAD (optional symbolic check; treat as a check, not as a source):
 
 def format_math_for_streamlit(text: str) -> str:
     """Normalize common model LaTeX styles to Streamlit's Markdown math syntax."""
+    # A model may accidentally wrap an explanation in ```java, ```text, or ```.
+    # Those fences force Streamlit to render the contents as plain code.
+    text = re.sub(r"(?m)^\s*```[A-Za-z0-9_+-]*\s*$", "", text)
+
     # Convert standard LaTeX delimiters first.
     text = re.sub(r"\\\[(.*?)\\\]", r"\n$$\1$$\n", text, flags=re.DOTALL)
     text = re.sub(r"\\\((.*?)\\\)", r"$\1$", text, flags=re.DOTALL)
@@ -68,6 +72,39 @@ def format_math_for_streamlit(text: str) -> str:
         return match.group(0)
 
     text = re.sub(r"(?m)^\s*\[\s*(.*?)\s*\]\s*$", convert_bracket_equation, text)
+
+    # Convert common bare math lines, for example:
+    # "At x = \frac{\pi}{2}, y = 0" -> "At $x = ...$, $y = 0$"
+    def convert_value_line(match: re.Match[str]) -> str:
+        prefix, expression = match.group(1), match.group(2).strip()
+        expression = re.sub(r"\s*,\s*", r"$, $", expression)
+        return f"{prefix}${expression}$"
+
+    text = re.sub(
+        r"(?m)^(\s*(?:[-*]\s*)?At\s+)(x\s*=.*)$",
+        convert_value_line,
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # Wrap standalone LaTeX equations that the model omitted delimiters for,
+    # such as ``\sin(0) = 0`` or ``\sin(\pi/2) = 1``.
+    def convert_bare_math_line(match: re.Match[str]) -> str:
+        line = match.group(1).strip()
+        return f"\n$${line}$$\n"
+
+    text = re.sub(
+        r"(?m)^\s*((?:\\(?:sin|cos|tan|cot|sec|csc|pi|frac|sqrt|lim|infty)|[fy]\s*\([^\n]+\)|y\s*=)[^\n]*)\s*$",
+        convert_bare_math_line,
+        text,
+    )
+
+    # Also format short inline function expressions inside prose.
+    text = re.sub(
+        r"(?<![$\w])(y\s*=\s*\\(?:sin|cos|tan)\s*\([^\n)]*\))(?=[\s.,;:]|$)",
+        r"$\1$",
+        text,
+    )
     return text
 
 
@@ -131,26 +168,34 @@ class MathAgent:
     def __init__(self, persist_directory: str = "db/chroma_db") -> None:
         if not os.getenv("OPENAI_API_KEY"):
             raise RuntimeError("Set OPENAI_API_KEY in .env before starting Proof.")
-        if not Path(persist_directory).exists():
-            raise FileNotFoundError("No textbook index found. Index your textbooks first.")
-        self.store = Chroma(
-            collection_name=COLLECTION_NAME,
-            embedding_function=OpenAIEmbeddings(model="text-embedding-3-small"),
-            persist_directory=persist_directory,
-        )
+        self.store = None
+        if Path(persist_directory).exists():
+            try:
+                self.store = Chroma(
+                    collection_name=COLLECTION_NAME,
+                    embedding_function=OpenAIEmbeddings(model="text-embedding-3-small"),
+                    persist_directory=persist_directory,
+                )
+            except Exception:
+                # Cloud deployments may intentionally omit the large local index.
+                # The tutor can still answer general math questions without RAG.
+                self.store = None
         self.llm = ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"), temperature=0.1)
 
     def ask(self, question: str, k: int = 5) -> Tuple[str, List[Dict[str, object]], Optional[Tuple[Dict[str, List[float]], str]]]:
         graph = create_graph(question)
-        ranked_docs = self.store.similarity_search_with_relevance_scores(question, k=k)
-        docs = [doc for doc, score in ranked_docs if score >= 0.20]
+        if self.store is not None:
+            ranked_docs = self.store.similarity_search_with_relevance_scores(question, k=k)
+            docs = [doc for doc, score in ranked_docs if score >= 0.20]
+        else:
+            docs = []
         # Chroma can return weak matches when the library contains unrelated books.
         # An explicit message helps the model distinguish “no useful textbook context”
         # from a real excerpt without preventing a useful general math answer.
         context = (
             "\n\n---\n\n".join(doc.page_content for doc in docs)
             if docs
-            else "No relevant textbook excerpt was retrieved for this question."
+            else "No textbook index is available in this deployment. Answer using general mathematical knowledge and do not claim textbook citations."
         )
         answer = (PROMPT | self.llm).invoke({
             "question": question,
