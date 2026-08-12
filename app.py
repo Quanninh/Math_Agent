@@ -176,6 +176,28 @@ def render_library() -> None:
             ("Quotient rule", r"\frac{d}{dx}\left[\frac{f(x)}{g(x)}\right]=\frac{f'(x)g(x)-f(x)g'(x)}{[g(x)]^2}"),
             ("Chain rule", r"\frac{d}{dx}f(g(x))=f'(g(x))g'(x)"),
         ],
+        "Integration formulas": [
+            ("Constant", r"\int dx=x+C"),
+            ("Power rule", r"\int x^\alpha\,dx=\frac{x^{\alpha+1}}{\alpha+1}+C\quad(\alpha\ne-1)"),
+            ("Logarithm", r"\int\frac{dx}{x}=\ln|x|+C\quad(x\ne0)"),
+            ("Exponential base e", r"\int e^x\,dx=e^x+C"),
+            ("Exponential base a", r"\int a^x\,dx=\frac{a^x}{\ln a}+C\quad(0<a\ne1)"),
+            ("Sine", r"\int\sin x\,dx=-\cos x+C"),
+            ("Cosine", r"\int\cos x\,dx=\sin x+C"),
+            ("Secant squared", r"\int\sec^2x\,dx=\tan x+C"),
+            ("Cosecant squared", r"\int\csc^2x\,dx=-\cot x+C"),
+            ("Square-root form", r"\int\frac{dx}{2\sqrt{x}}=\sqrt{x}+C\quad(x>0)"),
+            ("Substitution power rule", r"\int u^\alpha\,du=\frac{u^{\alpha+1}}{\alpha+1}+C\quad(\alpha\ne-1)"),
+            ("Substitution logarithm", r"\int\frac{du}{u}=\ln|u|+C\quad(u\ne0)"),
+            ("Substitution exponential", r"\int e^u\,du=e^u+C"),
+            ("Substitution sine", r"\int\sin u\,du=-\cos u+C"),
+            ("Substitution cosine", r"\int\cos u\,du=\sin u+C"),
+            ("Linear cosine", r"\int\cos(ax+b)\,dx=\frac{1}{a}\sin(ax+b)+C\quad(a\ne0)"),
+            ("Linear sine", r"\int\sin(ax+b)\,dx=-\frac{1}{a}\cos(ax+b)+C\quad(a\ne0)"),
+            ("Linear denominator", r"\int\frac{dx}{ax+b}=\frac{1}{a}\ln|ax+b|+C\quad(a\ne0)"),
+            ("Linear exponential", r"\int e^{ax+b}\,dx=\frac{1}{a}e^{ax+b}+C\quad(a\ne0)"),
+            ("Square-root linear form", r"\int\frac{dx}{\sqrt{ax+b}}=\frac{2}{a}\sqrt{ax+b}+C\quad(a\ne0)"),
+        ],
     }
 
     for group_name, formulas in formula_groups.items():
