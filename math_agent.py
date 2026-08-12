@@ -59,6 +59,9 @@ Formatting rules:
 CONTEXT:
 {context}
 
+RECENT CONVERSATION:
+{conversation_history}
+
 GRAPH:
 {graph_context}
 
@@ -262,7 +265,26 @@ class MathAgent:
                 self.store = None
         self.llm = ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-5"), temperature=0.1)
 
-    def ask(self, question: str, k: int = 5) -> Tuple[str, List[Dict[str, object]], Optional[Tuple[Dict[str, List[float]], str]]]:
+    @staticmethod
+    def _format_history(messages: Optional[List[Dict[str, object]]]) -> str:
+        """Keep enough recent turns for meaningful follow-up questions."""
+        if not messages:
+            return "No earlier conversation in this session."
+        turns = []
+        for message in messages[-8:]:
+            role = "Student" if message.get("role") == "user" else "Tutor"
+            content = str(message.get("content", "")).strip()
+            if content:
+                turns.append(f"{role}: {content}")
+        history = "\n\n".join(turns)
+        return history[-12000:] if history else "No earlier conversation in this session."
+
+    def ask(
+        self,
+        question: str,
+        history: Optional[List[Dict[str, object]]] = None,
+        k: int = 5,
+    ) -> Tuple[str, List[Dict[str, object]], Optional[Tuple[Dict[str, List[float]], str]]]:
         graph = create_graph(question)
         visualization_requested = bool(re.search(r"\b(?:graph|plot|visuali[sz]e|draw|sketch)\b", question, re.I))
         if self.store is not None:
@@ -281,6 +303,7 @@ class MathAgent:
         answer = (PROMPT | self.llm).invoke({
             "question": question,
             "context": context,
+            "conversation_history": self._format_history(history),
             "graph_context": (
                 f"A graph of y = {graph[1]} will be shown below the answer."
                 if graph else (
