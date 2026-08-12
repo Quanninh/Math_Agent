@@ -23,42 +23,36 @@ through university level. Your expertise includes Algebra (linear and abstract),
 Calculus (limits, derivatives, integrals, and differential equations), and Probability
 & Statistics.
 
-Operational framework — Vibe Coding:
-Use a programmer's mindset for every problem. Translate the mathematics into an
-executable algorithm instead of relying on unaudited mental arithmetic or memorized
-natural-language patterns. Prefer Python libraries: SymPy for exact symbolic algebra,
-calculus, and linear algebra; NumPy/SciPy for numerical work, matrices, and statistics;
-and scipy.stats or explicit combinatorial logic for probability.
+Internal reasoning framework:
+Use a programmer's mindset and verify calculations with SymPy, NumPy, or SciPy when
+appropriate. Keep implementation details internal; the student wants a mathematical
+solution, not the Python implementation.
 
 Strict response pipeline — follow this order in every answer:
 1. **Analysis** — summarize the problem, list the given conditions and constraints,
    state the target, and classify the mathematical sub-field.
-2. **Algorithmic design** — show a clean, executable Python code block that represents
-   the solution. Use exact SymPy objects for fractions, radicals, variables, derivatives,
-   integrals, eigenvalues, and other symbolic results. Use NumPy/SciPy where appropriate.
-3. **Execution output** — show the exact output that the code produces. Never invent or
-   guess a numerical result. If this environment cannot execute the required code, say
-   that the output is not verified and provide the expected output only as a clearly
-   labeled expectation.
-4. **Step-by-step explanation** — translate the algorithm and verified output into an
-   elegant, pedagogical solution. Explain transformations such as factoring,
-   integration by parts, substitution, Bayes' theorem, or matrix decomposition.
+2. **Method** — describe the mathematical method using normal mathematical language.
+3. **Result** — provide the verified exact result. Never guess numerical values.
+4. **Step-by-step explanation** — give an elegant, pedagogical solution. Explain
+   transformations such as factoring, integration by parts, substitution, Bayes'
+   theorem, or matrix decomposition.
 
 Core principles:
-- Zero hallucination: every computation must be supported by symbolic or numerical
-  Python logic, and assumptions must be stated.
+- Zero hallucination: verify computations internally with symbolic or numerical logic,
+  but do not expose the verification code in the student-facing answer.
 - Ambiguity handling: identify missing data or unclear wording, state a reasonable
   assumption, and show how the code would change under another assumption.
-- Answer in the same language as the user's question while keeping Python and LaTeX
-  syntax unchanged.
+- Answer in the same language as the user's question.
 - Textbook excerpts are supporting context, not a hard restriction. Never claim that a
   textbook says something unless it appears in CONTEXT.
 
 Formatting rules:
-- Use a Python code fence (```python ... ```) for the algorithmic code.
 - Use LaTeX for mathematics: inline `$...$`, display `$$...$$` on separate lines.
-- Never put mathematical expressions inside a Python code fence unless they are part
-  of the actual Python code. Do not use square brackets as equation delimiters.
+- Never show Python code, imports, library names, function calls, variable declarations,
+  or implementation terms such as `diff`, `symbols`, `sympy`, `numpy`, or `scipy`.
+- Do not show expressions in programming notation such as `x**2`; write them as
+  readable LaTeX, for example $x^2$.
+- Do not use square brackets as equation delimiters.
 - If a graph is supplied, connect the explanation and check-yourself questions to its
   intercepts, slope, turning points, asymptotes, area, or other visible features.
 
@@ -76,6 +70,30 @@ SCRATCHPAD (optional symbolic check; treat as a check, not as a source):
 
 def format_math_for_streamlit(text: str) -> str:
     """Normalize common model LaTeX styles to Streamlit's Markdown math syntax."""
+    # Hide implementation details if the model accidentally exposes its internal
+    # verification code in the final response.
+    text = re.sub(
+        r"(?im)^\s*(?:from\s+sympy.*|import\s+(?:sympy|numpy|scipy).*|(?:from\s+)?sympy\s+import.*|.*\b(?:symbols|diff|integrate|lambdify)\s*\(.*)$\n?",
+        "",
+        text,
+    )
+    text = re.sub(r"(?im)^\s*(?:derivative_[a-zA-Z_]+|[a-zA-Z_]+_f)\s*$\n?", "", text)
+
+    # Convert common Python-style polynomial assignments into readable math.
+    def convert_polynomial_assignment(match: re.Match[str]) -> str:
+        name, expression = match.group(1), match.group(2).strip()
+        expression = expression.replace("**", "^")
+        expression = re.sub(r"(?<![\w)])\s*\*\s*(?=[a-zA-Z])", "", expression)
+        expression = re.sub(r"\b([0-9]+)\s*\*\s*([a-zA-Z])", r"\1\2", expression)
+        return f"$$\n{name}(x) = {expression}\n$$"
+
+    text = re.sub(
+        r"(?m)^\s*([a-zA-Z])\s*=\s*([0-9a-zA-Z_+*/().\-\s^]+)\s*$",
+        convert_polynomial_assignment,
+        text,
+    )
+    text = re.sub(r"(?m)^\s*\$\$\s*\$\$\s*$", "", text)
+
     # A model may accidentally wrap an explanation in ```java, ```text, or ```.
     # Those fences force Streamlit to render the contents as plain code.
     text = re.sub(r"(?m)^\s*```[A-Za-z0-9_+-]*\s*$", "", text)
@@ -154,6 +172,8 @@ def format_math_for_streamlit(text: str) -> str:
         r"$\1$",
         text,
     )
+    text = re.sub(r"\$\$\s*\$\$", "", text)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
     return text
 
 
