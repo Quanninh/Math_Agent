@@ -23,7 +23,7 @@ st.markdown("""
 [data-testid="stSidebar"] > div:first-child { padding:1.4rem 1rem; }
 [data-testid="stSidebar"] .stButton button { border:0; text-align:left; background:transparent; color:#59677a; border-radius:10px; padding:.75rem .9rem; }
 [data-testid="stSidebar"] .stButton button:hover { background:#d3e4fe; color:#001e40; }
-.brand { font:700 1.5rem 'Hanken Grotesk',sans-serif; color:#001e40; margin:.1rem 0 .15rem; }
+.brand { font:700 2.2rem 'Hanken Grotesk',sans-serif; color:#001e40; margin:.1rem 0 .35rem; }
 .brand-sub { color:#59677a; font-size:.78rem; margin-bottom:1.5rem; }
 .new-problem button { background:#001e40 !important; color:#fff !important; text-align:center !important; font-weight:600; }
 .page-header { display:flex; justify-content:space-between; align-items:center; padding:.7rem 0 1.2rem; border-bottom:1px solid rgba(195,198,209,.45); margin-bottom:1.4rem; }
