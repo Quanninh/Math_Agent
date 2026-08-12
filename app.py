@@ -47,7 +47,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 with st.sidebar:
-    st.markdown('<div class="brand">MathMind</div><div class="brand-sub">Algorithmic Assistant</div>', unsafe_allow_html=True)
+    st.markdown('<div class="brand">MathTutor</div><div class="brand-sub">Algorithmic Assistant</div>', unsafe_allow_html=True)
     st.markdown('<div class="new-problem">', unsafe_allow_html=True)
     if st.button("＋  New Problem", use_container_width=True):
         st.session_state.messages = []
