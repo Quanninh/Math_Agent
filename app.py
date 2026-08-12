@@ -93,7 +93,8 @@ def render_chat() -> None:
 
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(format_math_for_streamlit(message["content"]))
+            formatted = format_math_for_streamlit(message["content"])
+            st.markdown(formatted)
             if message.get("graph"):
                 st.caption(f"Graph of y = {message['expression']}")
                 st.line_chart(pd.DataFrame(message["graph"]).set_index("x"), y="y", height=300)
@@ -102,12 +103,14 @@ def render_chat() -> None:
     question = st.chat_input("Ask a math question or type an equation…")
     question = question or st.session_state.pop("pending_question", None)
     if question:
-        st.session_state.messages.append({"role": "user", "content": question})
         try:
             if "agent" not in st.session_state:
                 st.session_state.agent = MathAgent()
+            history = st.session_state.messages.copy()
+            st.session_state.messages.append({"role": "user", "content": question})
             with st.spinner("MathMind is working through it…"):
-                answer, sources, graph = st.session_state.agent.ask(question)
+                answer, sources, graph = st.session_state.agent.ask(question, history)
+
             graph_data = graph[0] if graph else None
             expression = graph[1] if graph else None
             st.session_state.messages.append({"role": "assistant", "content": answer, "sources": sources, "graph": graph_data, "expression": expression})

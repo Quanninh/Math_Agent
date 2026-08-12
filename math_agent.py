@@ -53,13 +53,21 @@ Core principles:
 
 Formatting rules:
 - Use LaTeX for mathematics: inline `$...$`, display `$$...$$` on separate lines.
+- For multi-line equations, always use:
+  $$
+  \begin{{aligned}}
+  ...
+  \end{{aligned}}
+  $$
+- Never use `\begin{{align}}`, `\begin{{align*}}`, or other standalone LaTeX environments.
+- Never nest `$$...$$` inside another LaTeX environment.
 - Never show Python code, imports, library names, function calls, variable declarations,
   or implementation terms such as `diff`, `symbols`, `sympy`, `numpy`, or `scipy`.
 - Do not show expressions in programming notation such as `x**2`; write them as
-  readable LaTeX, for example $x^2$.
+  readable LaTeX, for example `$x^2$`.
 - Do not use square brackets as equation delimiters.
-- If a graph is supplied, connect the explanation and check-yourself questions to its
-  intercepts, slope, turning points, asymptotes, area, or other visible features.
+- If a graph is supplied, connect the explanation to its intercepts, slope, turning
+  points, asymptotes, area, or other visible features.
 
 CONTEXT:
 {context}
@@ -75,114 +83,44 @@ SCRATCHPAD (optional symbolic check; treat as a check, not as a source):
     ("human", "{question}"),
 ])
 
-
 def format_math_for_streamlit(text: str) -> str:
-    """Normalize common model LaTeX styles to Streamlit's Markdown math syntax."""
-    # Hide implementation details if the model accidentally exposes its internal
-    # verification code in the final response.
+    """Normalize model LaTeX for Streamlit."""
+
+    # Remove accidental implementation details
     text = re.sub(
-        r"(?im)^\s*(?:from\s+sympy.*|import\s+(?:sympy|numpy|scipy).*|(?:from\s+)?sympy\s+import.*|.*\b(?:symbols|diff|integrate|lambdify)\s*\(.*)$\n?",
+        r"(?im)^\s*(?:from\s+sympy.*|import\s+(?:sympy|numpy|scipy).*|"
+        r"(?:from\s+)?sympy\s+import.*|"
+        r".*\b(?:symbols|diff|integrate|lambdify)\s*\(.*)$\n?",
         "",
         text,
     )
-    text = re.sub(r"(?im)^\s*(?:derivative_[a-zA-Z_]+|[a-zA-Z_]+_f)\s*$\n?", "", text)
 
-    # Convert common Python-style polynomial assignments into readable math.
-    def convert_polynomial_assignment(match: re.Match[str]) -> str:
-        name, expression = match.group(1), match.group(2).strip()
-        expression = expression.replace("**", "^")
-        expression = re.sub(r"(?<![\w)])\s*\*\s*(?=[a-zA-Z])", "", expression)
-        expression = re.sub(r"\b([0-9]+)\s*\*\s*([a-zA-Z])", r"\1\2", expression)
-        return f"$$\n{name}(x) = {expression}\n$$"
-
+    # Remove accidental code fences
     text = re.sub(
-        r"(?m)^\s*([a-zA-Z])\s*=\s*([0-9a-zA-Z_+*/().\-\s^]+)\s*$",
-        convert_polynomial_assignment,
-        text,
-    )
-    text = re.sub(r"(?m)^\s*\$\$\s*\$\$\s*$", "", text)
-
-    # A model may accidentally wrap an explanation in ```java, ```text, or ```.
-    # Those fences force Streamlit to render the contents as plain code.
-    text = re.sub(r"(?m)^\s*```[A-Za-z0-9_+-]*\s*$", "", text)
-
-    # Convert standard LaTeX delimiters first.
-    text = re.sub(r"\\\[(.*?)\\\]", r"\n$$\1$$\n", text, flags=re.DOTALL)
-    text = re.sub(r"\\\((.*?)\\\)", r"$\1$", text, flags=re.DOTALL)
-
-    # Models sometimes emit a display equation as [ ... ]. Only convert a whole
-    # line when it contains clear mathematical LaTeX, avoiding Markdown links.
-    def convert_bracket_equation(match: re.Match[str]) -> str:
-        equation = match.group(1).strip()
-        if "\\" in equation or "^" in equation or "_" in equation:
-            return f"\n$$\n{equation}\n$$\n"
-        return match.group(0)
-
-    text = re.sub(r"(?m)^\s*\[\s*(.*?)\s*\]\s*$", convert_bracket_equation, text)
-
-    # Convert common bare math lines, for example:
-    # "At x = \frac{\pi}{2}, y = 0" -> "At $x = ...$, $y = 0$"
-    def convert_value_line(match: re.Match[str]) -> str:
-        prefix, expression = match.group(1), match.group(2).strip()
-        expression = re.sub(r"\s*,\s*", r"$, $", expression)
-        return f"{prefix}${expression}$"
-
-    text = re.sub(
-        r"(?m)^(\s*(?:[-*]\s*)?At\s+)(x\s*=.*)$",
-        convert_value_line,
-        text,
-        flags=re.IGNORECASE,
-    )
-
-    # Wrap standalone LaTeX equations that the model omitted delimiters for,
-    # such as ``\sin(0) = 0`` or ``\sin(\pi/2) = 1``.
-    def convert_bare_math_line(match: re.Match[str]) -> str:
-        line = match.group(1).strip()
-        return f"\n$${line}$$\n"
-
-    text = re.sub(
-        r"(?m)^\s*((?:\\(?:sin|cos|tan|cot|sec|csc|pi|frac|sqrt|lim|infty)|[fy]\s*\([^\n]+\)|y\s*=)[^\n]*)\s*$",
-        convert_bare_math_line,
+        r"(?m)^\s*```[A-Za-z0-9_+-]*\s*$",
+        "",
         text,
     )
 
-    # Also format short inline function expressions inside prose.
+    # \[ ... \] -> $$ ... $$
     text = re.sub(
-        r"(?<![$\w])(y\s*=\s*\\(?:sin|cos|tan)\s*\([^\n)]*\))(?=[\s.,;:]|$)",
+        r"\\\[(.*?)\\\]",
+        r"\n$$\n\1\n$$\n",
+        text,
+        flags=re.DOTALL,
+    )
+
+    # \( ... \) -> $ ... $
+    text = re.sub(
+        r"\\\((.*?)\\\)",
         r"$\1$",
         text,
-    )
-    # Handle complete trigonometric equalities before wrapping the function
-    # alone, so ``sin(pi/2) = 1`` stays one readable expression.
-    text = re.sub(
-        r"(?<![$\\\w])(\\(?:sin|cos|tan)\s*(?:\\left)?\([^\n]*?(?:\\right)?\)\s*=\s*[-+]?\d+)(?![$\w])",
-        r"$\1$",
-        text,
+        flags=re.DOTALL,
     )
 
-    text = re.sub(
-        r"(?<![$\\\w])(\\(?:sin|cos|tan|cot|sec|csc)(?:\\left)?\([^\n,)]+(?:\\right)?\))(?=[\s.,;:]|$)",
-        r"$\1$",
-        text,
-    )
-    text = re.sub(
-        r"(?<![$\w])(x\s*=\s*\\frac\{[^{}]+\}\{[^{}]+\})(?![$\w])",
-        r"$\1$",
-        text,
-    )
-    text = re.sub(
-        r"(?<![$\\\w])(\\(?:sin|cos|tan)\s*(?:\\left)?\([^\n]*?(?:\\right)?\)\s*=\s*[-+]?\d+)(?![$\w])",
-        r"$\1$",
-        text,
-    )
-    text = re.sub(
-        r"(?<![$\\\w{])((?:\d+\s*)?\\pi(?:\s*/\s*\d+)?)(?![\w$}])",
-        r"$\1$",
-        text,
-    )
-    text = re.sub(r"\$\$\s*\$\$", "", text)
-    text = re.sub(r"\n{3,}", "\n\n", text).strip()
-    return text
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
+    return text.strip()
 
 
 def symbolic_scratchpad(question: str) -> str:
