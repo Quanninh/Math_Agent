@@ -45,6 +45,12 @@ Core principles:
 - Answer in the same language as the user's question.
 - Textbook excerpts are supporting context, not a hard restriction. Never claim that a
   textbook says something unless it appears in CONTEXT.
+- Follow-up resolution: if the newest question is a contextual request such as
+  "explain it again", "explain again", "say that again", "giải thích lại",
+  "hãy giải thích lại", or "giải thích rõ hơn", resolve “it” from the most recent
+  Tutor answer in RECENT CONVERSATION. Re-explain that same result immediately in
+  simpler language, with the key steps expanded. Do not ask the student to repeat the
+  topic unless RECENT CONVERSATION is empty or genuinely contains no prior solution.
 
 Formatting rules:
 - Use LaTeX for mathematics: inline `$...$`, display `$$...$$` on separate lines.
@@ -285,6 +291,26 @@ class MathAgent:
         history: Optional[List[Dict[str, object]]] = None,
         k: int = 5,
     ) -> Tuple[str, List[Dict[str, object]], Optional[Tuple[Dict[str, List[float]], str]]]:
+        follow_up = bool(re.fullmatch(
+            r"\s*(?:please\s+)?(?:explain|say)\s+(?:it\s+)?again\s*[.!?]*\s*|"
+            r"\s*(?:hãy\s+)?giải\s*thích\s*(?:lại|rõ\s+hơn)\s*[.!?]*\s*",
+            question,
+            flags=re.IGNORECASE,
+        ))
+        if follow_up and history:
+            previous_answer = next(
+                (str(message.get("content", "")).strip()
+                 for message in reversed(history)
+                 if message.get("role") == "assistant" and message.get("content")),
+                "",
+            )
+            if previous_answer:
+                question = (
+                    "Re-explain the previous tutor answer below in simpler language. "
+                    "Keep the same topic and result, expand each key transformation, "
+                    "and do not ask the student to provide the question again.\n\n"
+                    f"Previous tutor answer:\n{previous_answer}"
+                )
         graph = create_graph(question)
         visualization_requested = bool(re.search(r"\b(?:graph|plot|visuali[sz]e|draw|sketch)\b", question, re.I))
         if self.store is not None:
