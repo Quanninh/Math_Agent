@@ -3,6 +3,12 @@
 import streamlit as st
 import sympy as sp
 import pandas as pd
+from sympy.parsing.sympy_parser import (
+    convert_xor,
+    implicit_multiplication_application,
+    parse_expr,
+    standard_transformations,
+)
 
 from math_agent import MathAgent, format_math_for_streamlit
 
@@ -113,16 +119,39 @@ def render_chat() -> None:
 def render_solver() -> None:
     render_header("Equation solver", "Work through algebra step by step and verify the result.")
     equation = st.text_input("Equation", placeholder="2(x - 3) + 4x = 5x + 7")
+    st.caption("If the multiplication sign is ""."" , remove it")
+    st.caption("If the equation has degree, replace the power sign with ^ .")
     if st.button("Solve equation", type="primary") and equation:
         try:
-            left, right = equation.split("=")
             x = sp.symbols("x")
-            solution = sp.solve(sp.sympify(left) - sp.sympify(right), x)
-            st.markdown('<div class="assistant-card"><div class="assistant-label">Solution</div>', unsafe_allow_html=True)
-            st.markdown(format_math_for_streamlit(f"$$ {sp.latex(sp.Eq(sp.Symbol('x'), solution[0]))} $$" if solution else "No real solution found."))
+            normalized = (
+                equation.replace("−", "-").replace("–", "-").replace("—", "-")
+                .replace("×", "*").replace("÷", "/")
+                .replace("²", "^2").replace("³", "^3")
+            )
+            parse_options = {
+                "local_dict": {"x": x},
+                "transformations": standard_transformations
+                + (implicit_multiplication_application, convert_xor),
+            }
+            st.markdown('<div class="assistant-card"><div class="assistant-label">Verified result</div>', unsafe_allow_html=True)
+            if "=" in normalized:
+                left, right = normalized.split("=", maxsplit=1)
+                solutions = sp.solve(
+                    parse_expr(left, **parse_options) - parse_expr(right, **parse_options), x
+                )
+                if len(solutions) == 1:
+                    st.latex(sp.latex(sp.Eq(x, solutions[0])))
+                elif solutions:
+                    st.latex(r"x\in\left\{" + ", ".join(sp.latex(value) for value in solutions) + r"\right\}")
+                else:
+                    st.latex(r"\text{No solution found.}")
+            else:
+                st.caption("Simplified expression")
+                st.latex(sp.latex(sp.expand(parse_expr(normalized, **parse_options))))
             st.markdown('</div>', unsafe_allow_html=True)
-        except Exception as exc:
-            st.error(f"Could not parse that equation: {exc}")
+        except Exception:
+            st.error("Could not read that expression. Use x as the variable and check that parentheses are balanced.")
 
 
 def render_library() -> None:
