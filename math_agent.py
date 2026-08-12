@@ -136,31 +136,37 @@ def symbolic_scratchpad(question: str) -> str:
 
 
 def extract_function(question: str) -> Optional[Tuple[str, str]]:
-    """Extract a simple y=f(x) expression for an optional graph."""
-    text = question.lower().replace("^", "**")
-    if not re.search(r"\b(?:graph|plot|visuali[sz]e|draw|sketch)\b", text):
+    """Extract a function expression requested for graphing."""
+
+    text = question.lower().replace("^", "**").strip()
+
+    # Only graph when the user explicitly asks for it.
+    if not re.search(
+        r"\b(?:graph|plot|visuali[sz]e|draw|sketch)\b",
+        text,
+    ):
         return None
-    named_functions = {
-        "sine": "sin(x)", "sin": "sin(x)",
-        "cosine": "cos(x)", "cos": "cos(x)",
-        "tangent": "tan(x)", "tan": "tan(x)",
-        "exponential": "exp(x)",
-    }
-    for name, expression in named_functions.items():
-        if re.search(rf"\b{name}(?:\s+function)?\b", text):
-            return "y", expression
+
     patterns = [
-        r"(?:y|f\s*\(\s*x\s*\))\s*=\s*([0-9a-zx+\-*/().\s]+?)(?=\s+(?:and|with|where|for|please)\b|[?.!,;:]|$)",
-        r"(?:graph|plot|visuali[sz]e)\s+(?:the\s+)?(?:function\s+)?([0-9a-zx+\-*/().\s]+?)(?=\s+(?:and|with|where|for|please)\b|[?.!,;:]|$)",
+        # Example: graph y = x**2 + cos(x)
+        r"(?:y|f\s*\(\s*x\s*\))\s*=\s*(.+?)(?=$|[.!?])",
+
+        # Example: graph x**2 + cos(x)
+        r"(?:graph|plot|visuali[sz]e|draw|sketch)\s+"
+        r"(?:the\s+)?(?:function\s+)?(.+?)(?=$|[.!?])",
     ]
+
     for pattern in patterns:
-        match = re.search(pattern, text, re.I)
+        match = re.search(pattern, text, re.IGNORECASE)
+
         if match:
-            expression = match.group(1).strip().rstrip("?.!,;:")
+            expression = match.group(1).strip()
+            expression = expression.rstrip(".,;!?")
+
             if "x" in expression:
                 return "y", expression
-    return None
 
+    return None
 
 def create_graph(question: str) -> Optional[Tuple[Dict[str, List[float]], str]]:
     """Create lightweight graph data for a function explicitly in the question."""
@@ -172,8 +178,13 @@ def create_graph(question: str) -> Optional[Tuple[Dict[str, List[float]], str]]:
         import numpy as np
 
         x = sp.symbols("x")
-        allowed = {"x": x, "sin": sp.sin, "cos": sp.cos, "tan": sp.tan,
-                   "exp": sp.exp, "log": sp.log, "sqrt": sp.sqrt, "abs": sp.Abs}
+        allowed = {
+            "x": x, "pi": sp.pi, "e": sp.E,
+            "sin": sp.sin, "cos": sp.cos, "tan": sp.tan, "cot": sp.cot, "sec": sp.sec, "csc": sp.csc,
+            "asin": sp.asin, "acos": sp.acos, "atan": sp.atan,
+            "sinh": sp.sinh, "cosh": sp.cosh, "tanh": sp.tanh,
+            "exp": sp.exp, "log": sp.log, "ln": sp.log, "sqrt": sp.sqrt, "abs": sp.Abs,
+        }
         formula = sp.sympify(expression, locals=allowed)
         if formula.has(sp.Symbol("y")) or formula.free_symbols - {x}:
             return None
