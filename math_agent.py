@@ -13,8 +13,7 @@ from langchain_chroma import Chroma
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 
-from ingestion_pipline import COLLECTION_NAME, load_documents, split_documents, create_vector_store
-
+from ingestion_pipline import COLLECTION_NAME
 load_dotenv()
 
 PROMPT = ChatPromptTemplate.from_messages([
@@ -269,7 +268,7 @@ class MathAgent:
                 # Cloud deployments may intentionally omit the large local index.
                 # The tutor can still answer general math questions without RAG.
                 self.store = None
-        self.llm = ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-5"), temperature=0.1)
+        self.llm = ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-5.6"), temperature=0.1)
 
     @staticmethod
     def _format_history(messages: Optional[List[Dict[str, object]]]) -> str:
@@ -349,9 +348,3 @@ class MathAgent:
             sources.append({"source": source, "page": page, "preview": doc.page_content[:180]})
         return str(answer), sources, graph
 
-
-def rebuild_index(docs_path: str = "docs", persist_directory: str = "db/chroma_db") -> int:
-    documents = load_documents(docs_path)
-    chunks = split_documents(documents)
-    create_vector_store(chunks, persist_directory)
-    return len(chunks)
