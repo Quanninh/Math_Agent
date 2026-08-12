@@ -8,6 +8,7 @@ dependencies:
   - python-dotenv>=1.0
   - pypdf>=5.0
   - numpy>=1.26
+  - pandas>=2.0
   - pip
   - pip:
       - langchain==0.3.30
