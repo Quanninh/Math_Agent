@@ -1,0 +1,17 @@
+name: proof
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - streamlit>=1.40
+  - sympy>=1.12
+  - python-dotenv>=1.0
+  - pypdf>=5.0
+  - numpy>=1.26
+  - pip
+  - pip:
+      - langchain==0.3.30
+      - langchain-chroma==0.2.6
+      - langchain-community==0.3.31
+      - langchain-openai==0.3.35
+      - langchain-text-splitters==0.3.11

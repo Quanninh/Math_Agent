@@ -1,0 +1,10 @@
+langchain==0.3.30
+langchain-chroma==0.2.6
+langchain-community==0.3.31
+langchain-openai==0.3.35
+langchain-text-splitters==0.3.11
+python-dotenv>=1.0
+sympy>=1.12
+streamlit>=1.40
+pypdf>=5.0
+numpy>=1.26
