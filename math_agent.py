@@ -260,7 +260,7 @@ class MathAgent:
                 # Cloud deployments may intentionally omit the large local index.
                 # The tutor can still answer general math questions without RAG.
                 self.store = None
-        self.llm = ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"), temperature=0.1)
+        self.llm = ChatOpenAI(model=os.getenv("OPENAI_MODEL", "gpt-5"), temperature=0.1)
 
     def ask(self, question: str, k: int = 5) -> Tuple[str, List[Dict[str, object]], Optional[Tuple[Dict[str, List[float]], str]]]:
         graph = create_graph(question)
