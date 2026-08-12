@@ -127,9 +127,65 @@ def render_solver() -> None:
 
 def render_library() -> None:
     render_header("Formula library", "Quick references for the concepts in your math workspace.")
-    formulas = [("Power rule", r"\frac{d}{dx}x^n = nx^{n-1}"), ("Product rule", r"(fg)' = f'g + fg'"), ("Chain rule", r"\frac{d}{dx}f(g(x)) = f'(g(x))g'(x)"), ("Quadratic formula", r"x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}"), ("Fundamental theorem", r"\int_a^b f(x)dx = F(b)-F(a)")]
-    for title, formula in formulas:
-        st.markdown(f'<div class="formula-card"><div class="assistant-label">{title}</div><div class="formula">{formula}</div></div>', unsafe_allow_html=True)
+    formula_groups = {
+        "Basic differentiation": [
+            ("Constant", r"\frac{d}{dx}(c)=0"),
+            ("Identity", r"\frac{d}{dx}(x)=1"),
+            ("Power rule", r"\frac{d}{dx}(x^n)=nx^{n-1}"),
+            ("Exponential base e", r"\frac{d}{dx}(e^x)=e^x"),
+            ("Exponential base a", r"\frac{d}{dx}(a^x)=a^x\ln(a)"),
+        ],
+        "Logarithmic functions": [
+            ("Natural logarithm", r"\frac{d}{dx}(\ln x)=\frac{1}{x}"),
+            ("Logarithm base a", r"\frac{d}{dx}(\log_a x)=\frac{1}{x\ln(a)}"),
+        ],
+        "Trigonometric functions": [
+            ("Sine", r"\frac{d}{dx}(\sin x)=\cos x"),
+            ("Cosine", r"\frac{d}{dx}(\cos x)=-\sin x"),
+            ("Tangent", r"\frac{d}{dx}(\tan x)=\sec^2 x"),
+            ("Cotangent", r"\frac{d}{dx}(\cot x)=-\csc^2 x"),
+            ("Secant", r"\frac{d}{dx}(\sec x)=\sec x\tan x"),
+            ("Cosecant", r"\frac{d}{dx}(\csc x)=-\csc x\cot x"),
+        ],
+        "Inverse trigonometric functions": [
+            ("Inverse sine", r"\frac{d}{dx}(\sin^{-1}x)=\frac{1}{\sqrt{1-x^2}}"),
+            ("Inverse cosine", r"\frac{d}{dx}(\cos^{-1}x)=-\frac{1}{\sqrt{1-x^2}}"),
+            ("Inverse tangent", r"\frac{d}{dx}(\tan^{-1}x)=\frac{1}{1+x^2}"),
+            ("Inverse cotangent", r"\frac{d}{dx}(\cot^{-1}x)=-\frac{1}{1+x^2}"),
+            ("Inverse secant", r"\frac{d}{dx}(\sec^{-1}x)=\frac{1}{|x|\sqrt{x^2-1}}"),
+            ("Inverse cosecant", r"\frac{d}{dx}(\csc^{-1}x)=-\frac{1}{|x|\sqrt{x^2-1}}"),
+        ],
+        "Hyperbolic functions": [
+            ("Hyperbolic sine", r"\frac{d}{dx}(\sinh x)=\cosh x"),
+            ("Hyperbolic cosine", r"\frac{d}{dx}(\cosh x)=\sinh x"),
+            ("Hyperbolic tangent", r"\frac{d}{dx}(\tanh x)=\operatorname{sech}^2 x"),
+            ("Hyperbolic cotangent", r"\frac{d}{dx}(\coth x)=-\operatorname{csch}^2 x"),
+            ("Hyperbolic secant", r"\frac{d}{dx}(\operatorname{sech}x)=-\operatorname{sech}x\tanh x"),
+            ("Hyperbolic cosecant", r"\frac{d}{dx}(\operatorname{csch}x)=-\operatorname{csch}x\coth x"),
+        ],
+        "Inverse hyperbolic functions": [
+            ("Inverse hyperbolic sine", r"\frac{d}{dx}(\sinh^{-1}x)=\frac{1}{\sqrt{1+x^2}}"),
+            ("Inverse hyperbolic cosine", r"\frac{d}{dx}(\cosh^{-1}x)=\frac{1}{\sqrt{x^2-1}}"),
+            ("Inverse hyperbolic tangent", r"\frac{d}{dx}(\tanh^{-1}x)=\frac{1}{1-x^2}"),
+            ("Inverse hyperbolic cotangent", r"\frac{d}{dx}(\coth^{-1}x)=\frac{1}{1-x^2}"),
+            ("Inverse hyperbolic secant", r"\frac{d}{dx}(\operatorname{sech}^{-1}x)=-\frac{1}{|x|\sqrt{1-x^2}}"),
+            ("Inverse hyperbolic cosecant", r"\frac{d}{dx}(\operatorname{csch}^{-1}x)=-\frac{1}{|x|\sqrt{1+x^2}}"),
+        ],
+        "Rules of differentiation": [
+            ("Product rule", r"\frac{d}{dx}[f(x)g(x)]=f'(x)g(x)+f(x)g'(x)"),
+            ("Quotient rule", r"\frac{d}{dx}\left[\frac{f(x)}{g(x)}\right]=\frac{f'(x)g(x)-f(x)g'(x)}{[g(x)]^2}"),
+            ("Chain rule", r"\frac{d}{dx}f(g(x))=f'(g(x))g'(x)"),
+        ],
+    }
+
+    for group_name, formulas in formula_groups.items():
+        st.markdown(f'<div class="section-title">{group_name}</div>', unsafe_allow_html=True)
+        columns = st.columns(2)
+        for index, (title, formula) in enumerate(formulas):
+            with columns[index % 2]:
+                with st.container(border=True):
+                    st.caption(title)
+                    st.latex(formula)
 
 
 def render_history() -> None:
