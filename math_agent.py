@@ -105,6 +105,34 @@ def format_math_for_streamlit(text: str) -> str:
         r"$\1$",
         text,
     )
+    # Handle complete trigonometric equalities before wrapping the function
+    # alone, so ``sin(pi/2) = 1`` stays one readable expression.
+    text = re.sub(
+        r"(?<![$\\\w])(\\(?:sin|cos|tan)\s*(?:\\left)?\([^\n]*?(?:\\right)?\)\s*=\s*[-+]?\d+)(?![$\w])",
+        r"$\1$",
+        text,
+    )
+
+    text = re.sub(
+        r"(?<![$\\\w])(\\(?:sin|cos|tan|cot|sec|csc)(?:\\left)?\([^\n,)]+(?:\\right)?\))(?=[\s.,;:]|$)",
+        r"$\1$",
+        text,
+    )
+    text = re.sub(
+        r"(?<![$\w])(x\s*=\s*\\frac\{[^{}]+\}\{[^{}]+\})(?![$\w])",
+        r"$\1$",
+        text,
+    )
+    text = re.sub(
+        r"(?<![$\\\w])(\\(?:sin|cos|tan)\s*(?:\\left)?\([^\n]*?(?:\\right)?\)\s*=\s*[-+]?\d+)(?![$\w])",
+        r"$\1$",
+        text,
+    )
+    text = re.sub(
+        r"(?<![$\\\w{])((?:\d+\s*)?\\pi(?:\s*/\s*\d+)?)(?![\w$}])",
+        r"$\1$",
+        text,
+    )
     return text
 
 
@@ -123,6 +151,17 @@ def symbolic_scratchpad(question: str) -> str:
 def extract_function(question: str) -> Optional[Tuple[str, str]]:
     """Extract a simple y=f(x) expression for an optional graph."""
     text = question.lower().replace("^", "**")
+    if not re.search(r"\b(?:graph|plot|visuali[sz]e|draw|sketch)\b", text):
+        return None
+    named_functions = {
+        "sine": "sin(x)", "sin": "sin(x)",
+        "cosine": "cos(x)", "cos": "cos(x)",
+        "tangent": "tan(x)", "tan": "tan(x)",
+        "exponential": "exp(x)",
+    }
+    for name, expression in named_functions.items():
+        if re.search(rf"\b{name}(?:\s+function)?\b", text):
+            return "y", expression
     patterns = [
         r"(?:y|f\s*\(\s*x\s*\))\s*=\s*([0-9a-zx+\-*/().\s]+?)(?=\s+(?:and|with|where|for|please)\b|[?.!,;:]|$)",
         r"(?:graph|plot|visuali[sz]e)\s+(?:the\s+)?(?:function\s+)?([0-9a-zx+\-*/().\s]+?)(?=\s+(?:and|with|where|for|please)\b|[?.!,;:]|$)",
@@ -184,6 +223,7 @@ class MathAgent:
 
     def ask(self, question: str, k: int = 5) -> Tuple[str, List[Dict[str, object]], Optional[Tuple[Dict[str, List[float]], str]]]:
         graph = create_graph(question)
+        visualization_requested = bool(re.search(r"\b(?:graph|plot|visuali[sz]e|draw|sketch)\b", question, re.I))
         if self.store is not None:
             ranked_docs = self.store.similarity_search_with_relevance_scores(question, k=k)
             docs = [doc for doc, score in ranked_docs if score >= 0.20]
@@ -202,10 +242,16 @@ class MathAgent:
             "context": context,
             "graph_context": (
                 f"A graph of y = {graph[1]} will be shown below the answer."
-                if graph else "No graph is being shown."
+                if graph else (
+                    "The student requested a visualization but no function was identified. "
+                    "Choose a clear example function and write it as f(x) = ... ."
+                    if visualization_requested else "No graph is being shown."
+                )
             ),
             "scratchpad": symbolic_scratchpad(question),
         }).content
+        if graph is None and visualization_requested:
+            graph = create_graph(str(answer))
         sources = []
         for doc in docs:
             source = Path(str(doc.metadata.get("source", "unknown"))).name
