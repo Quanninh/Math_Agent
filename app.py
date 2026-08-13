@@ -72,11 +72,13 @@ def render_header(title: str, subtitle: str) -> None:
 
 
 def render_sources(sources: list[dict[str, object]]) -> None:
-    if sources:
-        with st.expander("Textbook passages used"):
+    with st.expander("Sources", expanded=False):
+        if sources:
             for source in sources:
                 page = f", p. {source['page']}" if source.get("page") else ""
                 st.caption(f"{source['source']}{page} — {source['preview']}…")
+        else:
+            st.caption("No textbook passage was retrieved for this answer.")
 
 
 def render_chat() -> None:

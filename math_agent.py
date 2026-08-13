@@ -208,7 +208,7 @@ class MathAgent:
         if not os.getenv("OPENAI_API_KEY"):
             raise RuntimeError("Set OPENAI_API_KEY in .env before starting Proof.")
         self.store = None
-        if Path(persist_directory).exists():
+        if os.getenv("QDRANT_URL") and os.getenv("QDRANT_API_KEY"):
             try:
                 # self.store = Chroma(
                 #     collection_name=COLLECTION_NAME,
