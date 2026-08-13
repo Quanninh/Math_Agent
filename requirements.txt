@@ -9,3 +9,5 @@ streamlit>=1.40
 pypdf>=5.0
 numpy>=1.26
 scipy>=1.11
+langchain-qdrant
+qdrant-client

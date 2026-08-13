@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_qdrant import QdrantVectorStore
+
 
 from ingestion_pipline import COLLECTION_NAME
 load_dotenv()
@@ -208,10 +210,17 @@ class MathAgent:
         self.store = None
         if Path(persist_directory).exists():
             try:
-                self.store = Chroma(
-                    collection_name=COLLECTION_NAME,
-                    embedding_function=OpenAIEmbeddings(model="text-embedding-3-small"),
-                    persist_directory=persist_directory,
+                # self.store = Chroma(
+                #     collection_name=COLLECTION_NAME,
+                #     embedding_function=OpenAIEmbeddings(model="text-embedding-3-small"),
+                #     persist_directory=persist_directory,
+                # )
+
+                self.store = QdrantVectorStore.from_existing_collection(
+                    embedding=OpenAIEmbeddings(model="text-embedding-3-small"),
+                    url=os.getenv("QDRANT_URL"),
+                    api_key=os.getenv("QDRANT_API_KEY"),
+                    collection_name="math_textbooks",
                 )
             except Exception:
                 # Cloud deployments may intentionally omit the large local index.

@@ -14,6 +14,8 @@ from langchain_community.document_loaders import TextLoader
 from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_qdrant import QdrantVectorStore
+
 
 load_dotenv()
 
@@ -81,11 +83,20 @@ def create_vector_store(
     embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
     # A whole textbook can exceed the embeddings endpoint's per-request token
     # limit. Add chunks in small batches instead of embedding everything at once.
-    vectorstore = Chroma(
-        embedding_function=embeddings,
-        collection_name=COLLECTION_NAME,
-        persist_directory=persist_directory,
-        collection_metadata={"hnsw:space": "cosine"},
+    # vectorstore = Chroma(
+    #     embedding_function=embeddings,
+    #     collection_name=COLLECTION_NAME,
+    #     persist_directory=persist_directory,
+    #     collection_metadata={"hnsw:space": "cosine"},
+    # )
+    vectorstore = QdrantVectorStore.from_documents(
+        documents=chunks,
+        embedding=embeddings,
+        url=os.getenv("QDRANT_URL"),
+        api_key=os.getenv("QDRANT_API_KEY"),
+        collection_name="math_textbooks",
+        batch_size = 16,
+        timeout = 120
     )
     return vectorstore
 
