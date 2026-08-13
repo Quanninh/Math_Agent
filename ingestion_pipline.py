@@ -87,17 +87,6 @@ def create_vector_store(
         persist_directory=persist_directory,
         collection_metadata={"hnsw:space": "cosine"},
     )
-    vectorstore.delete_collection()
-    vectorstore = Chroma(
-        embedding_function=embeddings,
-        collection_name=COLLECTION_NAME,
-        persist_directory=persist_directory,
-        collection_metadata={"hnsw:space": "cosine"},
-    )
-    for start in range(0, len(chunks), batch_size):
-        batch = chunks[start : start + batch_size]
-        vectorstore.add_documents(batch)
-        print(f"Embedded {min(start + batch_size, len(chunks))}/{len(chunks)} chunks")
     return vectorstore
 
 
